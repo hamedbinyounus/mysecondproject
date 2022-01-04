@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="b96e103b-4b93-48c5-b495-852b1a999605" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="choiceFlow" doc:id="4f55dc4c-ca8b-45f2-bcd4-febf4fa5f350" >
+		<http:listener doc:name="Listener" doc:id="065930f0-3148-4004-9cac-fc0ac63ff5c5" config-ref="HTTP_Listener_config" path="/choice">
+			<http:error-response statusCode="400" >
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<choice doc:name="Choice" doc:id="0dfa849e-ad75-4863-a860-9387d9a15e07" >
+			<when expression='#[payload.accountType == "savings" or payload.accountType == "current" or payload.accountType == " credit"]'>
+				<set-payload value='#["valid account"]' doc:name="Set Payload" doc:id="c86ced00-825b-4123-88f8-3f6ca3b11de7" />
+			</when>
+			<otherwise >
+				<raise-error doc:name="Raise error" doc:id="ed38b950-1da7-4364-b3c3-1f47d825cf67" type="ACCOUNT:INVALID_ACCOUNT" description="given account number is invalid"/>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="57e16ba9-8811-4d9f-b33b-36fda5fbd967" type="ACCOUNT:INVALID_ACCOUNT">
+				<ee:transform doc:name="Transform Message" doc:id="e422a6d8-01b6-480e-8710-a72487be3f92" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"error":"invalid account"
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="statusCode" ><![CDATA[400]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
